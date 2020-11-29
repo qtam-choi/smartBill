@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ADMIN_MENU02">
+    
+ <!-- ================================================== 
+                          가입자 통계
+ ====================================================-->
+  
+ 	    
+    <select id="selEbStatsList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+			SELECT app_van
+			  	    , pos_store_nm
+				    , count(1) cnt
+				    , (select count(1) from epostbox_receipt r where r.pos_store_nm=a.pos_store_nm group by r.pos_store_nm  ) receipt_cnt
+			FROM epostbox_pos_user a
+			
+			WHERE 1 = 1
+    	
+		<if test="startDate != null and startDate != '' ">
+				AND a.req_at  &gt;= STR_TO_DATE(#{startDate}, '%Y-%m-%d') 
+		</if>
+		
+		<if test="endDate != null and endDate != '' ">
+				AND a.req_at  &lt;  DATE_ADD(STR_TO_DATE(#{endDate}, '%Y-%m-%d'), INTERVAL 1 DAY)
+		</if>	
+		
+		<if test="app_van != null and app_van != '' ">
+				 <if test="app_van == 'SMARTRO' or app_van == 'NICE' ">
+		        	AND a.app_van  = #{app_van}
+			    </if>    
+			    
+			    <if test="app_van == 'ETC' ">
+			    		AND a.app_van  not in ('SMARTRO', 'NICE')
+			    </if>	
+		</if>	
+			group by app_van, pos_store_nm
+			order by   app_van, pos_store_nm 				  
+
+	</select>
+    
+		
+</mapper>

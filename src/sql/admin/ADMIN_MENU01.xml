@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ADMIN_MENU01">
+    
+ <!-- ================================================== 
+                           전자영수증회원
+ ====================================================-->
+  
+ 	<!-- 리스트 -->
+    <sql id="includeEbUserList">
+    	WHERE 1 = 1
+    	<if test="searchValue != null and searchValue != '' ">
+	    	<if test="searchType == 'name' ">
+					AND name  like   CONCAT('%' , #{searchValue} , '%')
+			</if>
+			<if test="searchType == 'b.cust_hp' ">
+					AND b.cust_hp  like   CONCAT('%' , #{searchValue} , '%')
+			</if>
+    	
+		</if>
+	
+		<if test="startDate != null and startDate != '' ">
+				AND a.reg_at  &gt;= STR_TO_DATE(#{startDate}, '%Y-%m-%d') 
+		</if>
+		
+		<if test="endDate != null and endDate != '' ">
+				AND a.reg_at  &lt;  DATE_ADD(STR_TO_DATE(#{endDate}, '%Y-%m-%d'), INTERVAL 1 DAY)
+		</if>	
+		
+		<if test="reg_channel != null and reg_channel != '' ">
+				AND a.reg_channel  = #{reg_channel}
+		</if>	
+		
+		<if test="app_type != null and app_type != '' ">
+				AND a.app_type  = #{app_type}
+		</if>	
+		
+		<if test="status != null and status != '' ">
+				AND if(app_req_no is null , '미사용', '정상') =  #{status}
+		</if>					
+		
+	</sql>
+
+ 	
+    <select id="selEbUserListCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+			 SELECT count(*) cnt
+			 FROM  epostbox_user a  
+			 LEFT JOIN epostbox_pos_user b ON  a.pos_req_no = b.pos_req_no
+			<include refid="includeEbUserList"/>		
+	</select> 
+    
+    <select id="selEbUserList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+			SELECT a.*
+					 , if(app_req_no is null , '미사용', '정상') status
+					 , b.pos_store_owner
+					 , b.cust_hp
+					 , b.pos_store_nm
+					 , b.app_van
+			FROM  epostbox_user  a
+			LEFT JOIN epostbox_pos_user b ON  a.pos_req_no = b.pos_req_no
+			<include refid="includeEbUserList"/>		
+			ORDER BY reg_at desc
+			LIMIT ${startNum} ,  ${pageSize}	
+				  
+
+	</select>
+    
+    <select id="getEbUser" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+				SELECT a.*
+					 , if(app_req_no is null , '미사용', '정상') status
+					 , b.pos_store_owner
+					 , b.cust_hp
+					 , b.pos_store_nm
+					 , b.app_van
+			FROM  epostbox_user  a
+			LEFT JOIN epostbox_pos_user b ON  a.pos_req_no = b.pos_req_no
+			WHERE a.identify_key = #{identify_key}  
+
+	</select>
+	
+     <!-- ================================================== 
+                           영수증 발행 이력
+	 ====================================================-->
+	<!-- 리스트 -->
+    <sql id="includeEbReceptList">
+    	WHERE 1 = 1
+    	   AND identify_key = #{identify_key}
+    	   
+    	<if test="searchValue != null and searchValue != '' ">
+				AND #{searchType}  like   CONCAT('%' , #{searchValue} , '%')
+		</if>
+	
+		<if test="startDate != null and startDate != '' ">
+				AND a.reg_at  &gt;= STR_TO_DATE(#{startDate}, '%Y-%m-%d') 
+		</if>
+		
+		<if test="endDate != null and endDate != '' ">
+				AND a.reg_at  &lt;  DATE_ADD(STR_TO_DATE(#{endDate}, '%Y-%m-%d'), INTERVAL 1 DAY)
+		</if>	
+		
+		<if test="app_van != null and app_van != '' ">
+		    <if test="app_van == 'SMARTRO' or app_van == 'NICE' ">
+		        	AND a.app_van  = #{app_van}
+		    </if>    
+		    
+		    <if test="app_van == 'ETC' ">
+		    		AND a.app_van  not in ('SMARTRO', 'NICE')
+		    </if>		
+				
+		</if>	
+		
+		<if test="app_type != null and app_type != '' ">
+				AND a.app_type  = #{app_type}
+		</if>	
+		
+		<if test="yn_cancel_type != null and yn_cancel_type != '' ">
+				AND yn_cancel_type = #{yn_cancel_type}
+		</if>	
+		
+		
+						
+		
+	</sql>
+
+ 	
+    <select id="selEbReceptListCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+			 SELECT count(*) cnt
+			 FROM  epostbox_receipt  a
+			<include refid="includeEbReceptList"/>		
+	</select> 
+    
+    <select id="selEbReceptList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+			SELECT a.*
+			         , (select inv_card_no from epostbox_receipt_payment b where a.receipt_no = b.receipt_no limit 1) inv_card_no
+					 , case when yn_cancel_type = 'N' then '승인' 
+					         when yn_cancel_type = 'B' then '취소'
+					   end status
+			FROM  epostbox_receipt  a
+			
+			<include refid="includeEbReceptList"/>		
+			ORDER BY reg_at desc
+			LIMIT ${startNum} ,  ${pageSize}	
+				  
+
+	</select>
+	
+    
+    <!-- ================================================== 
+                           PASS서비스가입요청
+	 ====================================================-->
+    <!-- 리스트 -->
+    <sql id="includeEbPassUsertList">
+    	WHERE 1 = 1
+    	   AND identify_key = #{identify_key}
+	</sql>
+ 	
+    <select id="selEbPassUserListCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+			 SELECT count(*) cnt
+			 FROM  epostbox_pass_user  a
+			<include refid="includeEbPassUsertList"/>		
+	</select> 
+    
+    <select id="selEbPassUserList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+			SELECT a.*
+			FROM  epostbox_pass_user  a
+			
+			<include refid="includeEbPassUsertList"/>		
+			ORDER BY reg_at desc
+			LIMIT ${startNum} ,  ${pageSize}	
+	</select>
+	
+    
+    <!-- ================================================== 
+                           전자영수증회원
+ ====================================================-->
+  
+ 	<!-- 리스트 -->
+    <sql id="includeEbUserAgreeList">
+    	WHERE 1 = 1
+    	<if test="searchValue != null and searchValue != '' ">
+				<if test="searchType == 'name' ">
+					AND name  like   CONCAT('%' , #{searchValue} , '%')
+				</if>
+				<if test="searchType == 'b.cust_hp' ">
+						AND b.cust_hp  like   CONCAT('%' , #{searchValue} , '%')
+				</if>
+				<if test="searchType == 'pos_store_nm' ">
+						AND pos_store_nm  like   CONCAT('%' , #{searchValue} , '%')
+				</if>
+				
+				
+		</if>
+	
+		<if test="startDate != null and startDate != '' ">
+				AND a.reg_at  &gt;= STR_TO_DATE(#{startDate}, '%Y-%m-%d') 
+		</if>
+		
+		<if test="endDate != null and endDate != '' ">
+				AND a.reg_at  &lt;  DATE_ADD(STR_TO_DATE(#{endDate}, '%Y-%m-%d'), INTERVAL 1 DAY)
+		</if>	
+		
+		<if test="reg_channel != null and reg_channel != '' ">
+		    
+		     <if test="reg_channel == 'SMARTRO' or reg_channel == 'PASS'  or reg_channel == 'NICE'  ">
+		        	AND a.reg_channel  = #{reg_channel}
+		    </if>    
+		    
+		    <if test="app_van == 'ETC' ">
+		    		AND a.reg_channel  not in ('SMARTRO', 'NICE', 'PASS')
+		    </if>	
+		  
+		</if>	
+		
+		<if test="app_type != null and app_type != '' ">
+				AND a.app_type  = #{app_type}
+		</if>	
+		
+		<if test="status != null and status != '' ">
+				AND if(app_req_no is null , '미사용', '정상') =  #{status}
+		</if>					
+		
+	</sql>
+
+ 	
+    <select id="selEbUserListAgreeCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+			 SELECT count(*) cnt
+			 FROM  epostbox_user a  
+			 LEFT JOIN epostbox_pos_user b ON  a.pos_req_no = b.pos_req_no
+			<include refid="includeEbUserAgreeList"/>		
+	</select> 
+    
+    <select id="selEbUserAgreeList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+			SELECT a.*
+					 , if(app_req_no is null , '미사용', '정상') status
+					 , b.pos_store_owner
+					 , b.cust_hp
+					 , b.pos_store_nm
+					 , b.app_van
+			FROM  epostbox_user  a
+			LEFT JOIN epostbox_pos_user b ON  a.pos_req_no = b.pos_req_no
+			<include refid="includeEbUserAgreeList"/>		
+			ORDER BY reg_at desc
+			LIMIT ${startNum} ,  ${pageSize}	
+				  
+
+	</select>
+
+
+		
+</mapper>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+
+<mapper namespace="ADMIN_COMMON">
+
+   
+<!-- =================================================== 
+                             USER 정보
+ =====================================================-->      
+    
+    <!-- user 정보 가져오기 -->
+    <select id="selUserInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+		SELECT a.*
+		        , ifnull(pw_fault_cnt, 0) fault_cnt 
+		        , now() login_date
+		FROM com_admin_user a 
+		WHERE  UPPER(user_id) = UPPER(#{user_id})
+		  AND  ifnull(use_yn, 'N') = 'Y'   
+	</select>
+	
+
+    <update id="upPwFaultCnt" parameterType="java.util.HashMap" >
+   		UPDATE  com_admin_user 
+		SET 
+		 	<if test="pw_check == 'false'">
+               pw_fault_cnt = ifnull(pw_fault_cnt, 0) + 1
+           </if>
+		   <if test="pw_check == '' or pw_check == null ">
+                pw_fault_cnt = 0
+              , last_login_date = now() 
+           </if>
+		WHERE  UPPER(user_id) = UPPER(#{user_id})
+	</update>
+	
+    
+ <!-- =================================================== 
+                            MAIN정보
+ =====================================================-->   
+
+ <!-- 벤사 정보 가져오기 -->
+    <select id="selVenInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+		SELECT case when app_van = 'SMARTRO' then '스마트로'
+		                when app_van = 'NICE' then '나이스'
+			     else '기타' end app_van_desc
+		        , count(1) tot_cnt
+		        , sum(case when req_at > curdate() then 1 else 0 end)  today_cnt
+		FROM epostbox_pos_user a 
+		GROUP BY app_van
+		ORDER BY app_van desc
+	</select>
+	
+     <!-- 전자영수증 발급 정보 가져오기 -->
+    <select id="selReceptInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+		SELECT date(reg_at) reg_at
+		      , sum(case when app_type = '네이버' then 1 else 0 end) as naver_cnt
+		      , sum(case when app_type = '카카오' then 1 else 0 end) as kakao_cnt
+		      , sum(case when app_type = 'PASS' then 1 else 0 end) as pass_cnt
+			  , sum(case when app_type is null then 1 else 0 end) as etc_cnt
+		FROM epostbox_receipt
+		WHERE reg_at >  date(date_add(now(), interval -6 day))
+		GROUP BY date(reg_at)
+		ORDER BY reg_at
+	</select>
+	
+    <select id="selReceptTotInfo" parameterType="java.util.HashMap" resultType="java.util.HashMap" >
+    	SELECT date(reg_at) reg_at
+		      , count(1) as tot_cnt
+		      , sum(case when (app_type = 'PASS' and app_van = 'SMARTRO') then 1 else 0 end) as smartro_pass_cnt
+		      , sum(case when (app_type = '네이버' and app_van = 'SMARTRO') then 1 else 0 end) as smartro_naver_cnt
+		      , sum(case when (app_type = '카카오' and app_van = 'SMARTRO') then 1 else 0 end) as smartro_kakao_cnt
+		      , sum(case when (app_type is null and app_van = 'SMARTRO') then 1 else 0 end) as smartro_null_cnt
+		      , sum(case when (app_type = 'PASS' and app_van = 'NICE') then 1 else 0 end) as nice_pass_cnt
+		      , sum(case when (app_type = '네이버' and app_van = 'NICE') then 1 else 0 end) as nice_naver_cnt
+		      , sum(case when (app_type = '카카오' and app_van = 'NICE') then 1 else 0 end) as nice_kakao_cnt
+		      , sum(case when (app_type is null and app_van = 'NICE') then 1 else 0 end) as nice_null_cnt
+		      , sum(case when (app_type = 'PASS' and app_van not in ('SMARTRO', 'NICE')) then 1 else 0 end) as van_pass_cnt
+		      , sum(case when (app_type = '네이버' and app_van not in ('SMARTRO', 'NICE')) then 1 else 0 end) as van_naver_cnt
+		      , sum(case when (app_type = '카카오' and app_van not in ('SMARTRO', 'NICE')) then 1 else 0 end) as van_kakao_cnt
+		      , sum(case when (app_type is null and app_van not in ('SMARTRO', 'NICE')) then 1 else 0 end) as van_null_cnt
+		      
+		FROM epostbox_receipt
+		WHERE reg_at >  date(date_add(now(), interval -6 day))      
+		GROUP BY date(reg_at)
+		ORDER BY reg_at desc
+	</select>
+
+</mapper>

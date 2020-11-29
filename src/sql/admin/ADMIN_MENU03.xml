@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="ADMIN_MENU03">
+    
+ <!-- ================================================== 
+                            Admin 정보
+ ====================================================-->
+ 
+  
+ 	<!-- Admin 정보 리스트 -->
+    <sql id="includeAdminList">
+    	WHERE 1 = 1
+    	<if test="searchValue != null and searchValue != '' ">
+				<if test="searchType == 'user_id' ">
+						AND user_id  like   CONCAT('%' , #{searchValue} , '%')
+				</if>
+				<if test="searchType == 'user_nm' ">
+						AND user_nm  like   CONCAT('%' , #{searchValue} , '%')
+				</if>
+		</if>
+		<if test="use_yn != null and use_yn != '' ">
+				AND use_yn = #{use_yn}
+		</if>	
+		
+	</sql>
+
+ 	<!-- 한의원 정보 리스트 -->
+    <select id="selAdminListCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+			 SELECT count(*) cnt
+			 FROM  com_admin_user a  
+			<include refid="includeAdminList"/>		
+	</select> 
+    
+    <select id="selAdminList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+			SELECT a.*
+					 , if(use_yn = 'Y', '사용', '미사용') status
+			FROM  com_admin_user  a
+			<include refid="includeAdminList"/>		
+			ORDER BY apply_date desc
+			LIMIT ${startNum} ,  ${pageSize}	
+				  
+
+	</select>
+    
+    <select id="getAdmin" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+			SELECT a.*
+			        , if(use_yn = 'Y', '사용', '미사용') status
+			FROM  com_admin_user a
+			WHERE a.no = #{no}  
+
+	</select>
+	
+    <!-- ID 체크 -->
+ 	 <select id="getIdChk" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		SELECT user_id
+		FROM com_admin_user
+		WHERE  UPPER(user_id) = UPPER(#{userid})
+	</select>
+	
+    
+    <insert id="insAdmin" parameterType="java.util.HashMap"  >
+         INSERT INTO  com_admin_user (
+		      no          
+			, user_id   
+			, user_nm      
+			, passwd  
+			, auth
+			, email
+			, tel
+			, memo
+			, pw_fault_cnt
+			, use_yn
+			, apply_date  
+			, apply_id       
+ 		)  
+		VALUES (   
+		     (SELECT ifnull(MAX(no), 0) +1 FROM com_admin_user a)                         
+			, #{userid}   
+			, #{usernm}      
+			, #{passwd}   
+			, #{auth}
+			, #{email}
+			, #{tel}
+			, #{memo}
+			, 0
+			, 'Y'
+			, now()     
+			, #{user_id}   )    
+    </insert>
+    
+    <update id="upAdmin" parameterType="java.util.HashMap" >
+         UPDATE com_admin_user 
+		      SET   user_nm = #{usernm}      
+		      <if test="passwd != null and passwd != '' ">
+					, passwd = #{passwd}  
+			   </if>		
+					, auth = #{auth}  
+					, email = #{email}
+					, tel = #{tel}
+					, memo = #{memo}
+					, use_yn = #{use_yn}
+					, update_date = now()
+		            , update_id = #{user_id} 
+	 	 WHERE no = #{no} 
+    </update>
+    
+    <update id="upLockInit" parameterType="java.util.HashMap" >
+         UPDATE com_admin_user 
+		      SET  pw_fault_cnt = '0'
+		           , update_date = now()
+		           , update_id = #{user_id}
+	 	 WHERE no = #{no} 
+    </update>
+    
+    <delete id="delAdmin" parameterType="java.util.HashMap" >
+         DELETE FROM com_admin_user
+         WHERE a.no = #{no}  
+    </delete>
+
+		
+</mapper>
